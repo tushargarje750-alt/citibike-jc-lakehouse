@@ -54,31 +54,13 @@ resource "databricks_job" "pipeline" {
     }
   }
 
-  # ---------------------------------------------------------------- landing
-
-  task {
-    task_key    = "land_tripdata"
-    description = "Download new or republished monthly trip files into the landing volume."
-
-    notebook_task {
-      notebook_path   = "ingestion/notebooks/01_land_tripdata"
-      source          = "GIT"
-      base_parameters = local.notebook_parameters
-    }
-  }
-
-  task {
-    task_key    = "land_weather"
-    description = "Fetch daily weather for years that are missing or still open."
-
-    notebook_task {
-      notebook_path   = "ingestion/notebooks/02_land_weather"
-      source          = "GIT"
-      base_parameters = local.notebook_parameters
-    }
-  }
-
-  # ---------------------------------------------------------------- bronze
+  # Tasks are listed in alphabetical order of task_key on purpose. Databricks returns
+  # them in that order, and Terraform compares the list position by position, so any
+  # other order makes every `terraform plan` report a change that is not real.
+  # Execution order comes from depends_on, not from the order here:
+  #   land_tripdata -> bronze_trips  -+
+  #                                   +-> dbt_build
+  #   land_weather  -> bronze_weather -+
 
   task {
     task_key    = "bronze_trips"
@@ -110,8 +92,6 @@ resource "databricks_job" "pipeline" {
     }
   }
 
-  # ---------------------------------------------------------------- silver + gold
-
   task {
     task_key        = "dbt_build"
     description     = "dbt build: silver and gold models plus every data test and unit test."
@@ -131,6 +111,28 @@ resource "databricks_job" "pipeline" {
       warehouse_id      = local.warehouse_id
       catalog           = var.catalog
       schema            = "citibike"
+    }
+  }
+
+  task {
+    task_key    = "land_tripdata"
+    description = "Download new or republished monthly trip files into the landing volume."
+
+    notebook_task {
+      notebook_path   = "ingestion/notebooks/01_land_tripdata"
+      source          = "GIT"
+      base_parameters = local.notebook_parameters
+    }
+  }
+
+  task {
+    task_key    = "land_weather"
+    description = "Fetch daily weather for years that are missing or still open."
+
+    notebook_task {
+      notebook_path   = "ingestion/notebooks/02_land_weather"
+      source          = "GIT"
+      base_parameters = local.notebook_parameters
     }
   }
 }

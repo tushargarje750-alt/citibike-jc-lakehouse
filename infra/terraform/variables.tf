@@ -63,3 +63,9 @@ variable "alert_emails" {
   type        = list(string)
   default     = []
 }
+
+variable "dashboard_parent_path" {
+  description = "Optional. Workspace folder for the dashboard. Default: a 'dashboards' folder in your home folder."
+  type        = string
+  default     = ""
+}

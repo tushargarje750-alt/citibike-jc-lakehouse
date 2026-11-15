@@ -1,0 +1,709 @@
+{
+  "datasets": [
+    {
+      "name": "ds_kpis",
+      "displayName": "Headline numbers",
+      "queryLines": [
+        "SELECT\n",
+        "  sum(trips)                                            AS total_trips,\n",
+        "  cast(round(avg(trips)) AS BIGINT)                     AS avg_trips_per_day,\n",
+        "  round(100 * sum(member_trips) / sum(trips), 1)        AS member_share_pct,\n",
+        "  round(100 * sum(electric_trips) / sum(trips), 1)      AS electric_share_pct\n",
+        "FROM workspace.citibike_gold.daily_ridership\n"
+      ]
+    },
+    {
+      "name": "ds_monthly",
+      "displayName": "Trips per month by rider type",
+      "queryLines": [
+        "SELECT\n",
+        "  ride_month,\n",
+        "  sum(member_trips) AS member_trips,\n",
+        "  sum(casual_trips) AS casual_trips\n",
+        "FROM workspace.citibike_gold.daily_ridership\n",
+        "GROUP BY ride_month\n",
+        "ORDER BY ride_month\n"
+      ]
+    },
+    {
+      "name": "ds_top_stations",
+      "displayName": "Top 10 start stations",
+      "queryLines": [
+        "SELECT\n",
+        "  concat(lpad(cast(start_rank AS STRING), 2, '0'), '  ', station_name) AS station,\n",
+        "  area,\n",
+        "  trips_started\n",
+        "FROM workspace.citibike_gold.top_stations\n",
+        "WHERE start_rank <= 10\n",
+        "ORDER BY start_rank\n"
+      ]
+    },
+    {
+      "name": "ds_peak_hours",
+      "displayName": "Trips per hour on a typical weekday and weekend day",
+      "queryLines": [
+        "WITH days AS (\n",
+        "  SELECT is_weekend, sum(days_observed) AS days\n",
+        "  FROM (SELECT DISTINCT day_of_week, is_weekend, days_observed FROM workspace.citibike_gold.peak_hours)\n",
+        "  GROUP BY is_weekend\n",
+        "),\n",
+        "hourly AS (\n",
+        "  SELECT is_weekend, started_hour, sum(trips) AS trips\n",
+        "  FROM workspace.citibike_gold.peak_hours\n",
+        "  GROUP BY is_weekend, started_hour\n",
+        ")\n",
+        "SELECT\n",
+        "  hourly.started_hour,\n",
+        "  round(max(CASE WHEN NOT hourly.is_weekend THEN hourly.trips / days.days END), 1) AS weekday_trips,\n",
+        "  round(max(CASE WHEN hourly.is_weekend THEN hourly.trips / days.days END), 1)     AS weekend_trips\n",
+        "FROM hourly\n",
+        "JOIN days ON days.is_weekend = hourly.is_weekend\n",
+        "GROUP BY hourly.started_hour\n",
+        "ORDER BY hourly.started_hour\n"
+      ]
+    },
+    {
+      "name": "ds_duration",
+      "displayName": "Median trip length per month by rider type",
+      "queryLines": [
+        "SELECT\n",
+        "  ride_month,\n",
+        "  max(CASE WHEN member_casual = 'member' THEN median_duration_minutes END) AS member_median_minutes,\n",
+        "  max(CASE WHEN member_casual = 'casual' THEN median_duration_minutes END) AS casual_median_minutes\n",
+        "FROM workspace.citibike_gold.member_vs_casual\n",
+        "GROUP BY ride_month\n",
+        "ORDER BY ride_month\n"
+      ]
+    },
+    {
+      "name": "ds_weather",
+      "displayName": "Ridership index by temperature and rain",
+      "queryLines": [
+        "SELECT\n",
+        "  CASE temperature_band\n",
+        "    WHEN 'freezing' THEN '1 Freezing (below 0 C)'\n",
+        "    WHEN 'cold'     THEN '2 Cold (0-10 C)'\n",
+        "    WHEN 'mild'     THEN '3 Mild (10-20 C)'\n",
+        "    WHEN 'warm'     THEN '4 Warm (20-27 C)'\n",
+        "    ELSE                 '5 Hot (27 C and up)'\n",
+        "  END                                                    AS temperature,\n",
+        "  CASE WHEN is_wet_day THEN 'Wet day (1 mm or more)' ELSE 'Dry day' END AS conditions,\n",
+        "  round(sum(avg_ridership_index * days) / sum(days), 3)  AS ridership_index\n",
+        "FROM workspace.citibike_gold.weather_impact\n",
+        "GROUP BY 1, 2\n",
+        "ORDER BY 1, 2\n"
+      ]
+    },
+    {
+      "name": "ds_daily_weather",
+      "displayName": "Daily trips and temperature",
+      "queryLines": [
+        "SELECT\n",
+        "  ride_date,\n",
+        "  temperature_mean_c,\n",
+        "  trips,\n",
+        "  CASE WHEN is_wet_day THEN 'Wet day (1 mm or more)' ELSE 'Dry day' END AS conditions\n",
+        "FROM workspace.citibike_gold.daily_ridership\n",
+        "WHERE temperature_mean_c IS NOT NULL\n"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "ridership",
+      "displayName": "Ridership",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# Citi Bike Jersey City & Hoboken - Ridership"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "subtitle",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Trips from February 2021 onward, built from the gold tables of the lakehouse pipeline (Databricks, Delta Lake, dbt). Trip data: Citi Bike. Weather data: Open-Meteo.com."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-total-trips",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kpis",
+                  "fields": [
+                    {
+                      "name": "total_trips",
+                      "expression": "`total_trips`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_trips",
+                  "displayName": "Total trips"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Total trips"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-trips-per-day",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kpis",
+                  "fields": [
+                    {
+                      "name": "avg_trips_per_day",
+                      "expression": "`avg_trips_per_day`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg_trips_per_day",
+                  "displayName": "Average trips per day"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Average trips per day"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-member-share",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kpis",
+                  "fields": [
+                    {
+                      "name": "member_share_pct",
+                      "expression": "`member_share_pct`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "member_share_pct",
+                  "displayName": "Trips by members (%)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Trips by members (%)"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-electric-share",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kpis",
+                  "fields": [
+                    {
+                      "name": "electric_share_pct",
+                      "expression": "`electric_share_pct`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "electric_share_pct",
+                  "displayName": "Trips on electric bikes (%)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Trips on electric bikes (%)"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "monthly-trips",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_monthly",
+                  "fields": [
+                    {
+                      "name": "ride_month",
+                      "expression": "`ride_month`"
+                    },
+                    {
+                      "name": "member_trips",
+                      "expression": "`member_trips`"
+                    },
+                    {
+                      "name": "casual_trips",
+                      "expression": "`casual_trips`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "ride_month",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Month"
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "member_trips",
+                      "displayName": "Members"
+                    },
+                    {
+                      "fieldName": "casual_trips",
+                      "displayName": "Casual riders"
+                    }
+                  ]
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Trips per month: members and casual riders"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "top-stations",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_top_stations",
+                  "fields": [
+                    {
+                      "name": "station",
+                      "expression": "`station`"
+                    },
+                    {
+                      "name": "area",
+                      "expression": "`area`"
+                    },
+                    {
+                      "name": "trips_started",
+                      "expression": "`trips_started`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "trips_started",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Trips started"
+                },
+                "y": {
+                  "fieldName": "station",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Station (rank and name)"
+                },
+                "color": {
+                  "fieldName": "area",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Area"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Top 10 start stations"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "peak-hours",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_peak_hours",
+                  "fields": [
+                    {
+                      "name": "started_hour",
+                      "expression": "`started_hour`"
+                    },
+                    {
+                      "name": "weekday_trips",
+                      "expression": "`weekday_trips`"
+                    },
+                    {
+                      "name": "weekend_trips",
+                      "expression": "`weekend_trips`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "started_hour",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Hour of day"
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "weekday_trips",
+                      "displayName": "Typical weekday"
+                    },
+                    {
+                      "fieldName": "weekend_trips",
+                      "displayName": "Typical weekend day"
+                    }
+                  ]
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Peak hours: trips per hour on a typical day"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 11,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "median-duration",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_duration",
+                  "fields": [
+                    {
+                      "name": "ride_month",
+                      "expression": "`ride_month`"
+                    },
+                    {
+                      "name": "member_median_minutes",
+                      "expression": "`member_median_minutes`"
+                    },
+                    {
+                      "name": "casual_median_minutes",
+                      "expression": "`casual_median_minutes`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "ride_month",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Month"
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "member_median_minutes",
+                      "displayName": "Members"
+                    },
+                    {
+                      "fieldName": "casual_median_minutes",
+                      "displayName": "Casual riders"
+                    }
+                  ]
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Median trip length in minutes"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "weather-index",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_weather",
+                  "fields": [
+                    {
+                      "name": "temperature",
+                      "expression": "`temperature`"
+                    },
+                    {
+                      "name": "conditions",
+                      "expression": "`conditions`"
+                    },
+                    {
+                      "name": "ridership_index",
+                      "expression": "`ridership_index`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "temperature",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Mean temperature of the day"
+                },
+                "y": {
+                  "fieldName": "ridership_index",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Ridership index (1.0 = normal day for that month)"
+                },
+                "color": {
+                  "fieldName": "conditions",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Conditions"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Weather impact: ridership index by temperature and rain"
+              },
+              "mark": {
+                "layout": "group"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 18,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "trips-vs-temperature",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_daily_weather",
+                  "fields": [
+                    {
+                      "name": "temperature_mean_c",
+                      "expression": "`temperature_mean_c`"
+                    },
+                    {
+                      "name": "trips",
+                      "expression": "`trips`"
+                    },
+                    {
+                      "name": "conditions",
+                      "expression": "`conditions`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "scatter",
+              "encodings": {
+                "x": {
+                  "fieldName": "temperature_mean_c",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Mean temperature (C)"
+                },
+                "y": {
+                  "fieldName": "trips",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Trips that day"
+                },
+                "color": {
+                  "fieldName": "conditions",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Conditions"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Each day: trips against temperature"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 24,
+            "width": 12,
+            "height": 6
+          }
+        }
+      ]
+    }
+  ]
+}

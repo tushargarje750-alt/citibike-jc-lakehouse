@@ -266,14 +266,56 @@ To be re-verified by the landing notebook in Phase 1.
 Nothing new had been published, so this run measured the steady state: no files
 landed, no rows added to bronze, silver processed incrementally, gold rebuilt.
 
-## Phase 6 — CI (GitHub Actions)
+## Phase 6 — CI (GitHub Actions) (2026-11-15)
+
+### First CI run on GitHub (`gh run list`)
+
+| Workflow | Result | Duration |
+|---|---|---|
+| CI (unit tests, Terraform fmt + validate, dbt build) | success | 2 min 18 s |
+| Publish dbt docs (GitHub Pages) | success | 1 min 14 s |
+
+### dbt build inside CI (`scripts/dbt_run_summary.py` on the CI artifact)
+
+| Item | Value |
+|---|---|
+| Data used | one month of bronze (2026-10), built into `ci_` schemas |
+| Steps | 87 (87 ok, 0 warn, 0 failed, 0 skipped) |
+| Models / data tests / unit tests | 13 / 73 / 1, all passing |
+| dbt elapsed time | 71.1 s |
+| Slowest model | `fct_trips`, 24.1 s |
+
+### Other
+
+| Item | Value |
+|---|---|
+| Python unit tests run in CI | 46 |
+| dbt docs site | live at https://tushargarje750-alt.github.io/citibike-jc-lakehouse/ |
+
+## Phase 7 — dashboard (AI/BI dashboard defined in Terraform) (2026-11-15)
 
 | Item | Value | Source |
 |---|---|---|
-| Unit tests in the suite | 46 | `pytest` |
-| CI jobs per push / pull request | 3 (unit tests, Terraform fmt + validate, dbt build on one month) | `.github/workflows/ci.yml` |
-| First CI run: result | Pending | `gh run list` |
-| First CI run: duration | Pending | `gh run list` |
-| dbt steps run in CI (models + tests) | Pending (expected 87) | `scripts/dbt_run_summary.py` |
-| dbt build time in CI | Pending | `scripts/dbt_run_summary.py` |
-| dbt docs site published | Pending | `gh run list` |
+| Dashboard content | 4 KPI tiles + 6 charts, 7 datasets, all reading gold tables | `dashboards/citibike_ridership.lvdash.json` |
+| Terraform apply | 2 added (workspace folder, dashboard), 1 changed in place (the job), 0 destroyed | `terraform apply` |
+| Cause of the job "change" | task order only (Terraform listed tasks in a different order than Databricks returns them); fixed by declaring tasks alphabetically | `terraform plan` |
+| `terraform plan` after the fix | Pending (expected: No changes) | `terraform plan` |
+| Terraform-managed resources in total | 3 (job, folder, dashboard) | `infra/terraform` |
+| Charts rendering without errors | 6 of 6, plus 4 of 4 tiles | published dashboard, screenshots in `docs/screenshots` |
+| Tile values match the gold summary | total trips 5.36M, 2.56K per day, 72.1% members, 43% electric | published dashboard |
+| Unit tests in the suite | 53 (7 check the dashboard definition) | `pytest` |
+
+## Phase 8 — write-up
+
+| Item | Value |
+|---|---|
+| README | architecture diagram, results, data quality, orchestration, CI, screenshots, setup, limits |
+| Resume bullets and portfolio card | `docs/PORTFOLIO.md`, every number traceable to this log |
+
+## Notes on numbers that were measured at different times
+
+- The CI run measured in Phase 6 executed 46 Python unit tests. The suite grew to 53 in Phase 7;
+  every CI run from the Phase 7 commit onward executes all 53.
+- The first full `dbt build` of silver alone took 34.52 s on a laptop connection (47 steps).
+  The same project with gold (87 steps) took 121.8 s as a job task, which includes installing
+  dbt on serverless compute, and 71.1 s of dbt time in CI on one month of data.
