@@ -1,0 +1,185 @@
+version: 2
+
+models:
+  - name: fct_trips
+    description: >
+      One row per accepted trip: typed, deduplicated on ride_id, with that day's weather.
+      Built incrementally (merge on ride_id). Rejected rows are in trips_quarantine.
+    columns:
+      - name: ride_id
+        description: Unique ride identifier.
+        data_tests:
+          - not_null
+          - unique
+      - name: rideable_type
+        description: Bike type as published (for example classic_bike, electric_bike, docked_bike).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [classic_bike, electric_bike, docked_bike]
+              config:
+                severity: warn     # a new bike type should be noticed, not stop the build
+      - name: member_casual
+        description: member (annual subscriber) or casual (single ride or day pass).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [member, casual]
+      - name: started_at
+        description: Trip start, local time (America/New_York).
+        data_tests:
+          - not_null
+      - name: ended_at
+        description: Trip end, local time.
+        data_tests:
+          - not_null
+      - name: started_date
+        description: Calendar day the trip started. Joins to dim_weather_daily.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_weather_daily')
+                field: weather_date
+      - name: started_hour
+        description: Hour of day the trip started (0-23).
+        data_tests:
+          - value_between:
+              arguments:
+                min_value: 0
+                max_value: 23
+      - name: day_of_week
+        description: 1 = Monday ... 7 = Sunday.
+      - name: is_weekend
+        description: True for Saturday and Sunday.
+      - name: duration_seconds
+        description: Trip length in seconds. Always within the accepted range set in dbt_project.yml.
+        data_tests:
+          - not_null
+          - value_between:
+              arguments:
+                min_value: "{{ var('min_trip_seconds') }}"
+                max_value: "{{ var('max_trip_seconds') }}"
+      - name: duration_minutes
+        description: Trip length in minutes, two decimals.
+      - name: start_station_id
+        description: Station where the trip started.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_stations')
+                field: station_id
+      - name: end_station_id
+        description: Station where the trip ended. Null when the bike was not docked at a station.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_stations')
+                field: station_id
+      - name: has_end_station
+        description: False when the trip has no end station.
+      - name: is_round_trip
+        description: True when the trip started and ended at the same station.
+      - name: temperature_mean_c
+        description: Mean temperature on the start day, degrees Celsius.
+      - name: precipitation_mm
+        description: Total precipitation on the start day, millimetres.
+      - name: weather_category
+        description: Dominant weather on the start day (clear, cloudy, fog, drizzle, rain, snow, thunderstorm).
+      - name: is_wet_day
+        description: True when the start day had at least 1 mm of precipitation.
+      - name: _source_month
+        description: Month (yyyymm) of the source file the trip came from.
+      - name: _ingested_at
+        description: When the row was loaded into bronze. Drives the incremental filter.
+
+  - name: trips_quarantine
+    description: >
+      Bronze trip rows that were not accepted into fct_trips, each with the first rule it broke.
+      Rebuilt on every run.
+    columns:
+      - name: rejection_reason
+        description: The rule the row broke (see int_trips__checked).
+        data_tests:
+          - not_null
+      - name: started_at_raw
+        description: Start time exactly as published.
+      - name: _source_file
+        description: Source file of the rejected row.
+
+  - name: dim_stations
+    description: >
+      One row per station seen in an accepted trip, as a start or an end. Uses the most
+      recent name and the median coordinates.
+    columns:
+      - name: station_id
+        description: Station identifier as published.
+        data_tests:
+          - not_null
+          - unique
+      - name: station_name
+        description: Most recent name used for the station.
+        data_tests:
+          - not_null
+      - name: name_variants
+        description: Number of different names this station id has had.
+      - name: area
+        description: Jersey City, Hoboken, or Outside JC/Hoboken (derived from the station id prefix).
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["Jersey City", "Hoboken", "Outside JC/Hoboken"]
+      - name: latitude
+        description: Median latitude reported for the station.
+        data_tests:
+          - value_between:
+              arguments:
+                min_value: "{{ var('service_area')['min_lat'] }}"
+                max_value: "{{ var('service_area')['max_lat'] }}"
+              config:
+                severity: warn
+      - name: trips_started
+        description: Accepted trips that started here.
+      - name: trips_ended
+        description: Accepted trips that ended here.
+
+  - name: dim_weather_daily
+    description: One row per day of weather, with grouping labels. Weather data by Open-Meteo.com (CC BY 4.0).
+    columns:
+      - name: weather_date
+        description: Calendar day, local time.
+        data_tests:
+          - not_null
+          - unique
+      - name: temperature_mean_c
+        description: Mean temperature, degrees Celsius.
+        data_tests:
+          - not_null
+          - value_between:
+              arguments:
+                min_value: -40
+                max_value: 50
+      - name: temperature_band
+        description: freezing (<0), cold (0-10), mild (10-20), warm (20-27), hot (27+), by mean temperature in Celsius.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [freezing, cold, mild, warm, hot]
+      - name: precipitation_mm
+        description: Total precipitation, millimetres.
+        data_tests:
+          - value_between:
+              arguments:
+                min_value: 0
+      - name: is_wet_day
+        description: True when precipitation was at least 1 mm.
+      - name: is_snow_day
+        description: True when any snowfall was recorded.
+      - name: weather_category
+        description: WMO weather code grouped into clear, cloudy, fog, drizzle, rain, snow, thunderstorm, other.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [clear, cloudy, fog, drizzle, rain, snow, thunderstorm, other]

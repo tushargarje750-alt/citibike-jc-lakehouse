@@ -1,5 +1,5 @@
 name: citibike_lakehouse
-version: "0.1.0"
+version: "0.3.0"
 config-version: 2
 
 # Must match the top-level key in profiles.yml
@@ -15,5 +15,30 @@ test-paths: ["tests"]
 target-path: "target"
 clean-targets: ["target", "dbt_packages"]
 
-# Model configuration (schemas, materializations) is added in Phase 3,
-# when the first models exist.
+# Data-quality thresholds used by int_trips__checked. Change them here, not in SQL.
+vars:
+  min_trip_seconds: 60          # shorter rides are false starts / re-docks
+  max_trip_seconds: 86400       # longer than 24 hours is treated as a lost or stuck bike
+  service_area:                 # generous box around NYC / Jersey City; catches junk coordinates
+    min_lat: 40.4
+    max_lat: 41.0
+    min_lng: -74.4
+    max_lng: -73.6
+  max_quarantine_share: 0.05    # warn if more than 5% of bronze rows are rejected
+
+models:
+  citibike_lakehouse:
+    # Write model and column descriptions into Unity Catalog as comments
+    +persist_docs:
+      relation: true
+      columns: true
+    staging:              # silver: light renaming and typing, one view per source table
+      +schema: citibike_silver
+      +materialized: view
+    intermediate:         # silver: business rules that more than one model needs
+      +schema: citibike_silver
+      +materialized: table      # computed once per run, then read by three models
+    marts:
+      core:               # silver: cleaned, tested tables that gold is built from
+        +schema: citibike_silver
+        +materialized: table

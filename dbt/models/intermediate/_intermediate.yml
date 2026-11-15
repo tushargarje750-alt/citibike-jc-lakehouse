@@ -1,0 +1,66 @@
+version: 2
+
+models:
+  - name: int_trips__checked
+    description: >
+      Every staged trip with its duration and a verdict. rejection_reason is null for
+      good trips; otherwise it names the first rule the row broke. Thresholds live in
+      dbt_project.yml (vars).
+    columns:
+      - name: duration_seconds
+        description: Seconds between started_at and ended_at.
+      - name: rejection_reason
+        description: >
+          Null for accepted trips. Otherwise one of: missing_ride_id, invalid_timestamp,
+          non_positive_duration, duration_too_short, duration_too_long,
+          missing_start_station, invalid_rider_type, start_outside_service_area,
+          duplicate_ride_id.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - missing_ride_id
+                  - invalid_timestamp
+                  - non_positive_duration
+                  - duration_too_short
+                  - duration_too_long
+                  - missing_start_station
+                  - invalid_rider_type
+                  - start_outside_service_area
+                  - duplicate_ride_id
+
+# A dbt unit test: runs the model's SQL on the hand-written rows below instead of
+# real data, and checks the verdict for each one. It needs no bronze data at all.
+unit_tests:
+  - name: each_rule_rejects_the_right_trips
+    description: One row per rule, plus a good trip and a duplicated ride.
+    model: int_trips__checked
+    given:
+      - input: ref('stg_citibike__trips')
+        rows:
+          - {ride_id: good,      started_at: "2024-05-01 08:00:00", ended_at: "2024-05-01 08:10:00", start_station_id: JC005, start_station_name: Grove St PATH, member_casual: member, start_lat: 40.72, start_lng: -74.04, _source_month: "202405", _ingested_at: "2024-06-05 00:00:00"}
+          - {ride_id: null,      started_at: "2024-05-01 08:00:00", ended_at: "2024-05-01 08:10:00", start_station_id: JC005, start_station_name: Grove St PATH, member_casual: member, start_lat: 40.72, start_lng: -74.04, _source_month: "202405", _ingested_at: "2024-06-05 00:00:00"}
+          - {ride_id: no_end,    started_at: "2024-05-01 08:00:00", ended_at: null,                  start_station_id: JC005, start_station_name: Grove St PATH, member_casual: member, start_lat: 40.72, start_lng: -74.04, _source_month: "202405", _ingested_at: "2024-06-05 00:00:00"}
+          - {ride_id: backwards, started_at: "2024-05-01 08:10:00", ended_at: "2024-05-01 08:00:00", start_station_id: JC005, start_station_name: Grove St PATH, member_casual: member, start_lat: 40.72, start_lng: -74.04, _source_month: "202405", _ingested_at: "2024-06-05 00:00:00"}
+          - {ride_id: too_short, started_at: "2024-05-01 08:00:00", ended_at: "2024-05-01 08:00:59", start_station_id: JC005, start_station_name: Grove St PATH, member_casual: member, start_lat: 40.72, start_lng: -74.04, _source_month: "202405", _ingested_at: "2024-06-05 00:00:00"}
+          - {ride_id: one_min,   started_at: "2024-05-01 08:00:00", ended_at: "2024-05-01 08:01:00", start_station_id: JC005, start_station_name: Grove St PATH, member_casual: member, start_lat: 40.72, start_lng: -74.04, _source_month: "202405", _ingested_at: "2024-06-05 00:00:00"}
+          - {ride_id: too_long,  started_at: "2024-05-01 08:00:00", ended_at: "2024-05-02 08:00:01", start_station_id: JC005, start_station_name: Grove St PATH, member_casual: member, start_lat: 40.72, start_lng: -74.04, _source_month: "202405", _ingested_at: "2024-06-05 00:00:00"}
+          - {ride_id: no_start,  started_at: "2024-05-01 08:00:00", ended_at: "2024-05-01 08:10:00", start_station_id: null,  start_station_name: null,          member_casual: member, start_lat: 40.72, start_lng: -74.04, _source_month: "202405", _ingested_at: "2024-06-05 00:00:00"}
+          - {ride_id: bad_rider, started_at: "2024-05-01 08:00:00", ended_at: "2024-05-01 08:10:00", start_station_id: JC005, start_station_name: Grove St PATH, member_casual: staff,  start_lat: 40.72, start_lng: -74.04, _source_month: "202405", _ingested_at: "2024-06-05 00:00:00"}
+          - {ride_id: far_away,  started_at: "2024-05-01 08:00:00", ended_at: "2024-05-01 08:10:00", start_station_id: JC005, start_station_name: Grove St PATH, member_casual: casual, start_lat: 0.0,   start_lng: 0.0,    _source_month: "202405", _ingested_at: "2024-06-05 00:00:00"}
+          - {ride_id: twice,     started_at: "2024-05-31 23:50:00", ended_at: "2024-06-01 00:05:00", start_station_id: JC005, start_station_name: Grove St PATH, member_casual: casual, start_lat: 40.72, start_lng: -74.04, _source_month: "202405", _ingested_at: "2024-06-05 00:00:00"}
+          - {ride_id: twice,     started_at: "2024-05-31 23:50:00", ended_at: "2024-06-01 00:05:00", start_station_id: JC005, start_station_name: Grove St PATH, member_casual: casual, start_lat: 40.72, start_lng: -74.04, _source_month: "202406", _ingested_at: "2024-07-05 00:00:00"}
+    expect:
+      rows:
+        - {ride_id: good,      _source_month: "202405", duration_seconds: 600,   rejection_reason: null}
+        - {ride_id: null,      _source_month: "202405", duration_seconds: 600,   rejection_reason: missing_ride_id}
+        - {ride_id: no_end,    _source_month: "202405", duration_seconds: null,  rejection_reason: invalid_timestamp}
+        - {ride_id: backwards, _source_month: "202405", duration_seconds: -600,  rejection_reason: non_positive_duration}
+        - {ride_id: too_short, _source_month: "202405", duration_seconds: 59,    rejection_reason: duration_too_short}
+        - {ride_id: one_min,   _source_month: "202405", duration_seconds: 60,    rejection_reason: null}
+        - {ride_id: too_long,  _source_month: "202405", duration_seconds: 86401, rejection_reason: duration_too_long}
+        - {ride_id: no_start,  _source_month: "202405", duration_seconds: 600,   rejection_reason: missing_start_station}
+        - {ride_id: bad_rider, _source_month: "202405", duration_seconds: 600,   rejection_reason: invalid_rider_type}
+        - {ride_id: far_away,  _source_month: "202405", duration_seconds: 600,   rejection_reason: start_outside_service_area}
+        - {ride_id: twice,     _source_month: "202405", duration_seconds: 900,   rejection_reason: duplicate_ride_id}
+        - {ride_id: twice,     _source_month: "202406", duration_seconds: 900,   rejection_reason: null}

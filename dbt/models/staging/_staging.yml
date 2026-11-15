@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: stg_citibike__trips
+    description: >
+      Bronze trips with text trimmed and values typed (timestamps, coordinates).
+      One row per bronze row from the newest version of each source file.
+      No quality filtering happens here.
+    columns:
+      - name: ride_id
+        description: Ride identifier. Can still be null or duplicated at this stage.
+      - name: started_at
+        description: Trip start, local time (America/New_York). Null if the text could not be parsed.
+      - name: ended_at
+        description: Trip end, local time. Null if the text could not be parsed.
+      - name: started_at_raw
+        description: Start time exactly as published, kept for diagnosing rejected rows.
+      - name: member_casual
+        description: Rider type as published, lower-cased (member or casual).
+      - name: _source_month
+        description: Month (yyyymm) of the source file.
+        data_tests:
+          - not_null
+
+  - name: stg_open_meteo__weather_daily
+    description: Daily weather with typed date and unit-bearing column names.
+    columns:
+      - name: weather_date
+        description: Calendar day, local time.
+        data_tests:
+          - not_null
+          - unique
+      - name: temperature_mean_c
+        description: Mean air temperature at 2 m, in degrees Celsius.
+      - name: precipitation_mm
+        description: Total precipitation (rain + melted snow), in millimetres.
+      - name: snowfall_cm
+        description: Snowfall, in centimetres.

@@ -1,0 +1,44 @@
+version: 2
+
+sources:
+  - name: citibike_bronze
+    description: >
+      Bronze layer: data exactly as published, loaded by the notebooks in
+      ingestion/notebooks. Every trip column is text; nothing has been cleaned.
+    database: "{{ env_var('DBT_CATALOG', 'workspace') }}"
+    schema: citibike_bronze
+    tables:
+      - name: trips_raw
+        description: >
+          Citi Bike Jersey City / Hoboken trips in the current file format
+          (February 2021 onwards), one row per line of the monthly CSV files.
+        config:
+          loaded_at_field: _ingested_at
+          freshness:
+            warn_after: {count: 45, period: day}
+        columns:
+          - name: ride_id
+            description: Ride identifier as published (text, not yet checked for uniqueness).
+          - name: _source_file
+            description: Full path of the CSV file the row was loaded from.
+            data_tests:
+              - not_null
+          - name: _source_month
+            description: Month (yyyymm) taken from the source file name.
+            data_tests:
+              - not_null
+          - name: _ingested_at
+            description: When the row was loaded into bronze.
+            data_tests:
+              - not_null
+
+      - name: weather_daily_raw
+        description: >
+          Daily weather for Jersey City / Hoboken from the Open-Meteo archive API,
+          one row per day, values and units as delivered. Weather data by Open-Meteo.com (CC BY 4.0).
+        columns:
+          - name: date
+            description: Calendar day (local time, America/New_York) as text.
+            data_tests:
+              - not_null
+              - unique

@@ -86,15 +86,56 @@ To be re-verified by the landing notebook in Phase 1.
 |---|---|---|
 | Unit tests passing (Phase 1 code) | 33 of 33 | `pytest` on the Mac |
 
-## Phase 2 — bronze (Delta Lake)
+## Phase 2 — bronze (Delta Lake) (2026-11-15)
+
+### Trips: Auto Loader into `citibike_bronze.trips_raw` (notebook 03, run summary)
+
+| Item | Value |
+|---|---|
+| Rows loaded, first run | 5,426,445 |
+| Files loaded | 69 (2021-02 to 2026-10) |
+| First-load duration | 25.3 s |
+| Rows counted at landing vs rows in bronze | 5,426,445 vs 5,426,445 |
+| Months where the two counts differ | 0 of 69 |
+| Rows with rescued (unexpected) data | 0 |
+| Rows with a blank ride_id | 0 |
+| Rows added on an immediate second run | Pending (expected 0) |
+
+### Landing first run, measured from the manifest
+
+| Item | Value |
+|---|---|
+| Files landed in the first run | 134 |
+| Time from first to last file | 98 s |
+
+### Weather: `citibike_bronze.weather_daily_raw` (notebook 04, run summary)
+
+| Item | Value |
+|---|---|
+| Rows written | 4,088 (2015-09-01 to 2026-11-09), all distinct days |
+| Days without temperature / precipitation | 0 / 0 |
+| Coldest / warmest value | -20.5 °C / 40.7 °C |
+| Days with precipitation / snowfall | 2,124 / 256 |
+| Duration | 14.1 s |
+
+### Code quality
 
 | Item | Value | Source |
 |---|---|---|
-| Unit tests passing | Pending (37 in the suite) | `pytest` on the Mac |
-| Rows loaded into `trips_raw`, first run | Pending | notebook 03 run summary |
-| Files loaded | Pending | notebook 03 run summary |
-| First-load duration | Pending | notebook 03 run summary |
-| Months where bronze and landing row counts differ | Pending (expected 0) | notebook 03 run summary |
-| Rows with rescued (unexpected) data | Pending | notebook 03 run summary |
-| Rows added on an immediate second run | Pending (expected 0) | notebook 03 run summary |
-| Weather rows in `weather_daily_raw` | Pending | notebook 04 run summary |
+| Unit tests in the suite | 37 | `pytest` |
+| Unit tests passing on the Mac | Pending | `pytest` on the Mac |
+
+## Phase 3 — silver (dbt)
+
+| Item | Value | Source |
+|---|---|---|
+| dbt models | 7 (2 views, 4 tables, 1 incremental) | `dbt build` |
+| dbt data tests / unit tests defined | 39 / 1 | `dbt build` |
+| Tests passing / warning / failing on real data | Pending | `dbt build` final line |
+| First `dbt build` duration | Pending | `dbt build` |
+| Second `dbt build` duration (incremental) | Pending | `dbt build` |
+| Staged bronze rows | Pending | `dbt run-operation silver_summary` |
+| Accepted into `fct_trips` | Pending | `dbt run-operation silver_summary` |
+| Rejected into `trips_quarantine`, by reason | Pending | `dbt run-operation silver_summary` |
+| Duplicate ride_ids removed | Pending | `dbt run-operation silver_summary` |
+| Stations in `dim_stations`, by area | Pending | `dbt run-operation silver_summary` |
