@@ -1,5 +1,5 @@
 name: citibike_lakehouse
-version: "0.4.0"
+version: "0.6.0"
 config-version: 2
 
 # Must match the top-level key in profiles.yml
@@ -25,6 +25,7 @@ vars:
     min_lng: -74.4
     max_lng: -73.6
   max_quarantine_share: 0.05    # warn if more than 5% of bronze rows are rejected
+  only_source_month: null       # set to a yyyymm string (CI does) to build from one month of bronze
 
 models:
   citibike_lakehouse:

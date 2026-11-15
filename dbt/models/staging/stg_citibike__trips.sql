@@ -4,6 +4,10 @@
 with source as (
 
     select * from {{ source('citibike_bronze', 'trips_raw') }}
+    {% if var('only_source_month') %}
+    -- CI builds a single month so every push can be tested in about a minute
+    where _source_month = '{{ var("only_source_month") }}'
+    {% endif %}
 
 ),
 

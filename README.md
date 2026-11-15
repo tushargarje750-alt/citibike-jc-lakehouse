@@ -1,11 +1,14 @@
 # Citi Bike Jersey City & Hoboken — Lakehouse Pipeline
 
+[![CI](https://github.com/tushargarje750-alt/citibike-jc-lakehouse/actions/workflows/ci.yml/badge.svg)](https://github.com/tushargarje750-alt/citibike-jc-lakehouse/actions/workflows/ci.yml)
+[![dbt docs](https://img.shields.io/badge/dbt%20docs-live-blue)](https://tushargarje750-alt.github.io/citibike-jc-lakehouse/)
+
 An end-to-end data engineering project on **Databricks Free Edition**: public Citi Bike trip data
 for Jersey City and Hoboken, plus daily weather, moved through a bronze → silver → gold
 (medallion) architecture on **Delta Lake**, transformed and tested with **dbt**, orchestrated by a
 **Databricks Job**, and checked by **GitHub Actions CI**.
 
-> **Status:** Phases 0–4 complete (setup, landing, bronze, silver, gold); Phase 5 (scheduled job in Terraform) in progress. The full README, with architecture diagram, results and
+> **Status:** Phases 0–5 complete (setup, landing, bronze, silver, gold, scheduled job); Phase 6 (CI) in progress. The full README, with architecture diagram, results and
 > screenshots, is written in Phase 8 once the numbers exist.
 
 - Plan and phases: [docs/PLAN.md](docs/PLAN.md)

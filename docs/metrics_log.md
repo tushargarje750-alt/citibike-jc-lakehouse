@@ -236,13 +236,44 @@ To be re-verified by the landing notebook in Phase 1.
 | Dry and warm | 342 | 1.088 |
 | Dry and hot | 51 | 1.042 |
 
-## Phase 5 — orchestration (Databricks Job defined in Terraform)
+## Phase 5 — orchestration (Databricks Job defined in Terraform) (2026-11-15)
+
+### Infrastructure as code (`terraform apply`)
+
+| Item | Value |
+|---|---|
+| Terraform resources created | 1 (the job), 0 changed, 0 destroyed |
+| Databricks provider version | 1.142.0 |
+| Job tasks | 5 (2 landing, 2 bronze, 1 dbt build), all on serverless compute |
+| Schedule | Mondays 06:00 America/New_York |
+| Code source | GitHub `main`, checked out on every run |
+
+### First job run, triggered manually (`python scripts/job_run_summary.py`)
+
+| Item | Value |
+|---|---|
+| Result | SUCCESS, 5 of 5 tasks |
+| Total duration | 201.0 s (3 min 21 s) |
+
+| Task | Result | Duration |
+|---|---|---|
+| `land_tripdata` | SUCCESS | 43.3 s |
+| `land_weather` | SUCCESS | 33.5 s |
+| `bronze_trips` | SUCCESS | 34.6 s |
+| `bronze_weather` | SUCCESS | 16.6 s |
+| `dbt_build` (13 models, 73 data tests, 1 unit test) | SUCCESS | 121.8 s |
+
+Nothing new had been published, so this run measured the steady state: no files
+landed, no rows added to bronze, silver processed incrementally, gold rebuilt.
+
+## Phase 6 — CI (GitHub Actions)
 
 | Item | Value | Source |
 |---|---|---|
-| Unit tests passing | Pending (41 in the suite) | `pytest` on the Mac |
-| Terraform resources created | Pending | `terraform apply` |
-| Job tasks | 5 (2 landing, 2 bronze, 1 dbt build) | `infra/terraform/main.tf` |
-| First job run: result | Pending | `python scripts/job_run_summary.py` |
-| First job run: total duration | Pending | `python scripts/job_run_summary.py` |
-| Duration per task | Pending | `python scripts/job_run_summary.py` |
+| Unit tests in the suite | 46 | `pytest` |
+| CI jobs per push / pull request | 3 (unit tests, Terraform fmt + validate, dbt build on one month) | `.github/workflows/ci.yml` |
+| First CI run: result | Pending | `gh run list` |
+| First CI run: duration | Pending | `gh run list` |
+| dbt steps run in CI (models + tests) | Pending (expected 87) | `scripts/dbt_run_summary.py` |
+| dbt build time in CI | Pending | `scripts/dbt_run_summary.py` |
+| dbt docs site published | Pending | `gh run list` |
