@@ -1,0 +1,19 @@
+name: citibike_lakehouse
+version: "0.1.0"
+config-version: 2
+
+# Must match the top-level key in profiles.yml
+profile: citibike_lakehouse
+
+# dbt Core v1 only (see docs/decisions.md, D3)
+require-dbt-version: [">=1.11.0", "<2.0.0"]
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+# Model configuration (schemas, materializations) is added in Phase 3,
+# when the first models exist.

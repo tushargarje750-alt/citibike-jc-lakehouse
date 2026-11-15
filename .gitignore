@@ -1,0 +1,35 @@
+# --- secrets: never commit ---
+.env
+.env.*
+!.env.example
+*.tfvars
+!*.tfvars.example
+
+# --- Python ---
+.venv
+__pycache__/
+*.pyc
+
+# --- dbt (generated on every run) ---
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+dbt/.user.yml
+logs/
+
+# --- Terraform (state can contain secrets) ---
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+
+# --- Databricks CLI / bundles ---
+.databricks/
+
+# --- local data downloads ---
+data/
+
+# --- macOS / editors ---
+.DS_Store
+.idea/
+.vscode/

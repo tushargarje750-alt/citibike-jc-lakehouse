@@ -1,0 +1,17 @@
+# Connection settings for dbt. Safe to commit: every sensitive value is read
+# from an environment variable (loaded from the git-ignored .env file by
+# scripts/activate.sh, or from GitHub Actions secrets in CI).
+
+citibike_lakehouse:
+  target: dev
+  outputs:
+    dev:
+      type: databricks
+      catalog: "{{ env_var('DBT_CATALOG', 'workspace') }}"
+      schema: citibike            # default schema; per-layer schemas arrive in Phase 3
+      host: "{{ env_var('DBT_DATABRICKS_HOST') }}"
+      http_path: "{{ env_var('DBT_DATABRICKS_HTTP_PATH') }}"
+      token: "{{ env_var('DBT_ENV_SECRET_DATABRICKS_TOKEN') }}"
+      threads: 4
+      connect_retries: 3
+      connect_timeout: 300        # the serverless warehouse may need to wake up first
