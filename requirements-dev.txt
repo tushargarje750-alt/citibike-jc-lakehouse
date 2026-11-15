@@ -1,2 +1,5 @@
 # Local development + CI.  dbt-databricks pins a compatible dbt-core (1.12.6 for 1.13.0).
 dbt-databricks==1.13.0
+
+# Unit tests for the ingestion code
+pytest>=8,<10

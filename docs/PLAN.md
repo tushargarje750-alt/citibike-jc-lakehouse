@@ -36,6 +36,8 @@
 ```
 .github/workflows/     CI (Phase 6)
 ingestion/notebooks/   landing + bronze notebooks (Phases 1–2)
+ingestion/citibike_ingest/  plain-Python ingestion logic used by the notebooks
+tests/                 unit tests for the ingestion logic (no Databricks needed)
 dbt/                   dbt project: staging / intermediate / marts (Phases 3–4)
 infra/terraform/       job definition as code (Phase 5)
 dashboards/            exported dashboard JSON (Phase 7)

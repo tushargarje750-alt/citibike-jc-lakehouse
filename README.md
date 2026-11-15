@@ -5,7 +5,7 @@ for Jersey City and Hoboken, plus daily weather, moved through a bronze → silv
 (medallion) architecture on **Delta Lake**, transformed and tested with **dbt**, orchestrated by a
 **Databricks Job**, and checked by **GitHub Actions CI**.
 
-> **Status:** Phase 0 (setup) complete. The full README, with architecture diagram, results and
+> **Status:** Phase 1 (landing) in progress. The full README, with architecture diagram, results and
 > screenshots, is written in Phase 8 once the numbers exist.
 
 - Plan and phases: [docs/PLAN.md](docs/PLAN.md)
@@ -21,4 +21,10 @@ pip install -r requirements-dev.txt
 cp .env.example .env          # then fill in host, HTTP path and token
 source scripts/activate.sh    # once per terminal window
 cd dbt && dbt debug           # expect: All checks passed!
+```
+
+## Tests
+
+```bash
+pytest        # unit tests for the ingestion logic; no Databricks connection needed
 ```

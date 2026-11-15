@@ -16,7 +16,7 @@ shown. Nothing is estimated. "Pending" means not measured yet.
 | Python | 3.12.16 | Homebrew install log |
 | dbt Core | 1.12.6 | `dbt --version` |
 | dbt-databricks adapter | 1.13.0 | `dbt --version` |
-| `dbt debug` | Pending | — |
+| `dbt debug` | All checks passed (2026-11-14, 23:40 ET) | `dbt debug` |
 
 ### Outbound network test from Databricks serverless compute
 
@@ -42,3 +42,19 @@ To be re-verified by the landing notebook in Phase 1.
 | — space instead of hyphen | 1 (`JC-201708 citibike-tripdata.csv.zip`) |
 | — misspelled "citbike" | 1 (`JC-202207-citbike-tripdata.csv.zip`) |
 | — `.zip` without `.csv` | 4 (2025-10, 2026-01, 2026-04, 2026-10) |
+
+## Phase 1 — landing and data discovery
+
+| Item | Value | Source |
+|---|---|---|
+| Unit tests (landing + weather logic) | 33 | `pytest` |
+| Unit tests passing locally | Pending | `pytest` on the Mac |
+| Trip files landed, first run | Pending | notebook 01 run summary |
+| Data rows landed | Pending | notebook 01 run summary |
+| Zip size / CSV size | Pending | notebook 01 run summary |
+| First run duration | Pending | notebook 01 run summary |
+| Files landed on an immediate second run | Pending (expected 0) | notebook 01 run summary |
+| Months per file format, and switch-over month | Pending | notebook 01 data discovery |
+| Distinct header variants | Pending | notebook 01 data discovery |
+| Weather days landed | Pending | notebook 02 run summary |
+| Weather days without temperature | Pending | notebook 02 run summary |
