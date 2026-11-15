@@ -166,13 +166,83 @@ To be re-verified by the landing notebook in Phase 1.
 | Median trip length | 6.6 minutes |
 | Stations in `dim_stations` | 979 (86 Jersey City, 39 Hoboken, 854 outside) |
 
-## Phase 4 — gold (dbt) and docs
+## Phase 4 — gold (dbt) and docs (2026-11-15)
+
+### Build (`dbt build`, silver incremental + gold)
+
+| Item | Value |
+|---|---|
+| Models in the project | 13 (7 silver, 6 gold) |
+| Tests run | 73 data tests + 1 unit test |
+| Result | PASS=87, WARN=0, ERROR=0 |
+| Duration | Pending (the job run in Phase 5 records it) |
+
+### Gold tables (`dbt run-operation gold_summary`)
+
+| Table | Rows | Grain |
+|---|---|---|
+| `daily_ridership` | 2,097 | day |
+| `top_stations` | 979 | station |
+| `peak_hours` | 336 | weekday x hour x rider type |
+| `member_vs_casual` | 138 | month x rider type |
+| `weather_impact` | 20 | temperature band x wet/dry x weekend/weekday |
+| `trip_duration_stats` | 28 | year x rider type x bike type |
+
+### Headline analytics
+
+| Item | Value |
+|---|---|
+| Total accepted trips | 5,358,983 (2021-02-01 to 2026-10-31) |
+| Average trips per day | 2,556 |
+| Busiest day | 2026-09-12, 4,815 trips |
+| Member share / electric-bike share | 72.1% / 43.0% |
+| Busiest hour, weekdays / weekends | 17:00 / 12:00 |
+| Median trip, members / casual riders | 5.9 min / 9.3 min |
+| Weekend share of trips, members / casual riders | 23.1% / 36.0% |
+| Calendar days in the period with no trips at all | 2 of 2,099 |
+
+| Year | Trips | Per day |
+|---|---|---|
+| 2021 (from February) | 618,101 | 1,856 |
+| 2022 | 874,991 | 2,397 |
+| 2023 | 965,200 | 2,644 |
+| 2024 | 1,044,742 | 2,854 |
+| 2025 | 1,002,341 | 2,746 |
+| 2026 (to October) | 853,608 | 2,817 |
+
+| Top start stations | Trips started |
+|---|---|
+| 1. Grove St PATH (Jersey City) | 175,616 |
+| 2. Hoboken Terminal - River St & Hudson Pl (Hoboken) | 164,190 |
+| 3. Hoboken Terminal - Hudson St & Hudson Pl (Hoboken) | 146,566 |
+| 4. South Waterfront Walkway - Sinatra Dr & 1 St (Hoboken) | 145,388 |
+| 5. Hamilton Park (Jersey City) | 121,934 |
+
+| Area | Stations | Trips started | Trips ended |
+|---|---|---|---|
+| Jersey City | 86 | 2,987,874 | 2,957,511 |
+| Hoboken | 39 | 2,370,625 | 2,372,613 |
+| Outside JC/Hoboken | 854 | 484 | 12,164 |
+
+### Weather impact (ridership index: 1.0 = a normal day for that month)
+
+| Group | Days | Index |
+|---|---|---|
+| Dry days | 1,363 | 1.07 |
+| Wet days (1 mm or more) | 736 | 0.87 |
+| Dry and freezing | 163 | 0.88 |
+| Dry and cold | 398 | 1.093 |
+| Dry and mild | 409 | 1.113 |
+| Dry and warm | 342 | 1.088 |
+| Dry and hot | 51 | 1.042 |
+
+## Phase 5 — orchestration (Databricks Job defined in Terraform)
 
 | Item | Value | Source |
 |---|---|---|
-| dbt models in the project | 13 (7 silver, 6 gold) | `dbt build` |
-| dbt data tests / unit tests defined | 73 / 1 | `dbt build` |
-| Result on real data | Pending | `dbt build` final line |
-| Build duration (silver incremental + gold) | Pending | `dbt build` |
-| Rows per gold table | Pending | `dbt run-operation gold_summary` |
-| Headline analytics (busiest day, top stations, peak hours, weather index) | Pending | `dbt run-operation gold_summary` |
+| Unit tests passing | Pending (41 in the suite) | `pytest` on the Mac |
+| Terraform resources created | Pending | `terraform apply` |
+| Job tasks | 5 (2 landing, 2 bronze, 1 dbt build) | `infra/terraform/main.tf` |
+| First job run: result | Pending | `python scripts/job_run_summary.py` |
+| First job run: total duration | Pending | `python scripts/job_run_summary.py` |
+| Duration per task | Pending | `python scripts/job_run_summary.py` |

@@ -1,0 +1,6 @@
+# Optional overrides. Copy to terraform.tfvars (git-ignored) and edit.
+# Everything has a working default, so this file is not required.
+
+# alert_emails    = ["you@example.com"]
+# schedule_cron   = "0 0 6 * * ?"      # every day at 06:00 instead of Mondays
+# schedule_paused = true

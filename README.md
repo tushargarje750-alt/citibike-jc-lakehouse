@@ -5,7 +5,7 @@ for Jersey City and Hoboken, plus daily weather, moved through a bronze → silv
 (medallion) architecture on **Delta Lake**, transformed and tested with **dbt**, orchestrated by a
 **Databricks Job**, and checked by **GitHub Actions CI**.
 
-> **Status:** Phases 0–3 complete (setup, landing, bronze, silver); Phase 4 (gold, dbt docs) in progress. The full README, with architecture diagram, results and
+> **Status:** Phases 0–4 complete (setup, landing, bronze, silver, gold); Phase 5 (scheduled job in Terraform) in progress. The full README, with architecture diagram, results and
 > screenshots, is written in Phase 8 once the numbers exist.
 
 - Plan and phases: [docs/PLAN.md](docs/PLAN.md)
