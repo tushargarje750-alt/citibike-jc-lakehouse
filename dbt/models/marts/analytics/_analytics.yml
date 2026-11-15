@@ -1,0 +1,220 @@
+version: 2
+
+models:
+  - name: daily_ridership
+    description: One row per day with trip counts, rider mix, trip length and the day's weather.
+    columns:
+      - name: ride_date
+        description: Calendar day (local time).
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('dim_weather_daily')
+                field: weather_date
+      - name: trips
+        description: Accepted trips that started on this day.
+        data_tests:
+          - not_null
+          - value_between:
+              arguments:
+                min_value: 1
+      - name: member_trips
+        description: Trips by members.
+      - name: casual_trips
+        description: Trips by casual riders.
+      - name: member_share
+        description: member_trips divided by trips.
+        data_tests:
+          - value_between:
+              arguments:
+                min_value: 0
+                max_value: 1
+      - name: electric_share
+        description: Share of trips on electric bikes.
+      - name: median_duration_minutes
+        description: Median trip length in minutes.
+        data_tests:
+          - not_null
+      - name: active_start_stations
+        description: Number of different stations where at least one trip started.
+      - name: temperature_band
+        description: freezing, cold, mild, warm or hot (see dim_weather_daily).
+      - name: is_wet_day
+        description: True when the day had at least 1 mm of precipitation.
+
+  - name: top_stations
+    description: One row per station with trips started and ended, rider mix, and its rank by trips started.
+    columns:
+      - name: station_id
+        description: Station identifier.
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('dim_stations')
+                field: station_id
+      - name: area
+        description: Jersey City, Hoboken, or Outside JC/Hoboken.
+      - name: trips_started
+        description: Accepted trips that started at this station.
+        data_tests:
+          - not_null
+          - value_between:
+              arguments:
+                min_value: 0
+      - name: trips_ended
+        description: Accepted trips that ended at this station.
+      - name: net_departures
+        description: trips_started minus trips_ended. Positive means bikes tend to leave this station.
+      - name: member_share_of_starts
+        description: Share of trips started here that were by members.
+      - name: avg_starts_per_active_day
+        description: Trips started per day, counting only days with at least one start.
+      - name: start_rank
+        description: 1 = the station with the most trips started.
+        data_tests:
+          - not_null
+          - value_between:
+              arguments:
+                min_value: 1
+
+  - name: peak_hours
+    description: One row per weekday, hour and rider type, with total trips and trips on a typical such day.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [day_of_week, started_hour, member_casual]
+    columns:
+      - name: day_of_week
+        description: 1 = Monday ... 7 = Sunday.
+        data_tests:
+          - not_null
+          - value_between:
+              arguments:
+                min_value: 1
+                max_value: 7
+      - name: started_hour
+        description: Hour of day (0-23).
+        data_tests:
+          - not_null
+          - value_between:
+              arguments:
+                min_value: 0
+                max_value: 23
+      - name: member_casual
+        description: member or casual.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [member, casual]
+      - name: trips
+        description: All accepted trips in this weekday-hour-rider cell.
+      - name: days_observed
+        description: Number of such weekdays in the data.
+      - name: avg_trips_per_day
+        description: trips divided by days_observed.
+      - name: hour_rank_in_day
+        description: 1 = the busiest hour of that weekday for that rider type.
+
+  - name: member_vs_casual
+    description: One row per month and rider type, comparing volume, trip length and riding habits.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [ride_month, member_casual]
+    columns:
+      - name: ride_month
+        description: First day of the month.
+        data_tests:
+          - not_null
+      - name: member_casual
+        description: member or casual.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [member, casual]
+      - name: trips
+        description: Accepted trips in the month by this rider type.
+      - name: share_of_month_trips
+        description: This rider type's share of the month's trips.
+        data_tests:
+          - value_between:
+              arguments:
+                min_value: 0
+                max_value: 1
+      - name: median_duration_minutes
+        description: Median trip length in minutes.
+        data_tests:
+          - not_null
+      - name: electric_share
+        description: Share of trips on electric bikes.
+      - name: weekend_share
+        description: Share of trips taken on Saturday or Sunday.
+      - name: round_trip_share
+        description: Share of trips that ended at the station they started from.
+
+  - name: weather_impact
+    description: >
+      One row per temperature band, wet or dry, weekend or weekday. avg_ridership_index
+      compares each day with the average day of its own month (1.0 = normal), which
+      removes the effect of the system growing over the years.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [temperature_band, is_wet_day, is_weekend]
+    columns:
+      - name: temperature_band
+        description: freezing, cold, mild, warm or hot.
+        data_tests:
+          - not_null
+      - name: is_wet_day
+        description: True when the day had at least 1 mm of precipitation.
+      - name: is_weekend
+        description: True for Saturday and Sunday.
+      - name: days
+        description: Number of calendar days in this group.
+        data_tests:
+          - value_between:
+              arguments:
+                min_value: 1
+      - name: avg_trips_per_day
+        description: Average trips per day in this group (not adjusted for growth).
+      - name: avg_ridership_index
+        description: Average of (day's trips / average daily trips of that month). 1.0 means a normal day.
+
+  - name: trip_duration_stats
+    description: One row per year, rider type and bike type with trip-length percentiles.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [ride_year, member_casual, rideable_type]
+    columns:
+      - name: ride_year
+        description: Calendar year.
+        data_tests:
+          - not_null
+      - name: member_casual
+        description: member or casual.
+      - name: rideable_type
+        description: Bike type.
+      - name: trips
+        description: Accepted trips in the group.
+      - name: median_minutes
+        description: Median trip length in minutes.
+        data_tests:
+          - not_null
+          - value_between:
+              arguments:
+                min_value: 1
+                max_value: 1440
+      - name: p95_minutes
+        description: 95% of trips were shorter than this.
+        data_tests:
+          - not_null
+      - name: share_under_10_min
+        description: Share of trips shorter than 10 minutes.
+      - name: share_over_30_min
+        description: Share of trips longer than 30 minutes.

@@ -21,7 +21,7 @@
         ~ "sum(case when member_casual = 'casual' then 1 else 0 end) as casuals, "
         ~ "sum(case when not has_end_station then 1 else 0 end) as no_end_station, "
         ~ "sum(case when temperature_mean_c is null then 1 else 0 end) as no_weather, "
-        ~ "round(percentile_approx(duration_minutes, 0.5), 1) as median_minutes "
+        ~ "round(percentile_approx(duration_seconds, 0.5) / 60.0, 1) as median_minutes "
         ~ "from " ~ ref('fct_trips')
     ) %}
     {% set f = trips.rows[0] %}

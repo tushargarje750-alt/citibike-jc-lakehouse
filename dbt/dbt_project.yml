@@ -1,5 +1,5 @@
 name: citibike_lakehouse
-version: "0.3.0"
+version: "0.4.0"
 config-version: 2
 
 # Must match the top-level key in profiles.yml
@@ -41,4 +41,7 @@ models:
     marts:
       core:               # silver: cleaned, tested tables that gold is built from
         +schema: citibike_silver
+        +materialized: table
+      analytics:          # gold: small aggregate tables for the dashboard
+        +schema: citibike_gold
         +materialized: table

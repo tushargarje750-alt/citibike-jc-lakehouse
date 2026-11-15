@@ -125,17 +125,54 @@ To be re-verified by the landing notebook in Phase 1.
 | Unit tests in the suite | 37 | `pytest` |
 | Unit tests passing on the Mac | Pending | `pytest` on the Mac |
 
-## Phase 3 — silver (dbt)
+## Phase 3 — silver (dbt) (2026-11-15)
+
+### Build (`dbt build`, first full run)
+
+| Item | Value |
+|---|---|
+| Models built | 7 (2 views, 4 tables, 1 incremental) |
+| Tests run | 39 data tests + 1 unit test |
+| Result | PASS=47, WARN=0, ERROR=0 |
+| Duration | 34.52 s |
+
+### Data quality (`dbt run-operation silver_summary`)
+
+| Item | Value |
+|---|---|
+| Bronze rows staged | 5,426,445 |
+| Accepted into `fct_trips` | 5,358,983 (98.76%) |
+| Rejected into `trips_quarantine` | 67,462 (1.24%) |
+| Rows unaccounted for | 0 |
+
+| Rejection reason | Rows |
+|---|---|
+| Trip shorter than 60 seconds | 61,579 |
+| Trip longer than 24 hours | 5,408 |
+| End time not after start time | 234 |
+| No start station | 201 |
+| Duplicate ride_id | 40 |
+| Missing ride_id, unreadable time, invalid rider type, start outside area | 0 each |
+
+### What is in silver
+
+| Item | Value |
+|---|---|
+| Trip days covered | 2021-02-01 to 2026-10-31 |
+| Member / casual trips | 3,864,146 (72.1%) / 1,494,837 (27.9%) |
+| Classic / electric / docked bike trips | 2,912,142 / 2,306,592 / 140,249 |
+| Trips with no end station (kept, flagged) | 16,695 |
+| Trips without a matching weather day | 0 |
+| Median trip length | 6.6 minutes |
+| Stations in `dim_stations` | 979 (86 Jersey City, 39 Hoboken, 854 outside) |
+
+## Phase 4 — gold (dbt) and docs
 
 | Item | Value | Source |
 |---|---|---|
-| dbt models | 7 (2 views, 4 tables, 1 incremental) | `dbt build` |
-| dbt data tests / unit tests defined | 39 / 1 | `dbt build` |
-| Tests passing / warning / failing on real data | Pending | `dbt build` final line |
-| First `dbt build` duration | Pending | `dbt build` |
-| Second `dbt build` duration (incremental) | Pending | `dbt build` |
-| Staged bronze rows | Pending | `dbt run-operation silver_summary` |
-| Accepted into `fct_trips` | Pending | `dbt run-operation silver_summary` |
-| Rejected into `trips_quarantine`, by reason | Pending | `dbt run-operation silver_summary` |
-| Duplicate ride_ids removed | Pending | `dbt run-operation silver_summary` |
-| Stations in `dim_stations`, by area | Pending | `dbt run-operation silver_summary` |
+| dbt models in the project | 13 (7 silver, 6 gold) | `dbt build` |
+| dbt data tests / unit tests defined | 73 / 1 | `dbt build` |
+| Result on real data | Pending | `dbt build` final line |
+| Build duration (silver incremental + gold) | Pending | `dbt build` |
+| Rows per gold table | Pending | `dbt run-operation gold_summary` |
+| Headline analytics (busiest day, top stations, peak hours, weather index) | Pending | `dbt run-operation gold_summary` |
