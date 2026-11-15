@@ -103,3 +103,30 @@ def test_failed_year_is_reported_and_others_continue(tmp_path):
                                   fetch=flaky, log=lambda _: None, pause_s=0)
     assert [year for year, _ in result.failures] == [2016]
     assert [r["year"] for r in result.records] == [2015, 2017]
+
+
+def test_flatten_gives_one_row_per_day_in_table_column_order():
+    start, end = date(2024, 2, 27), date(2024, 3, 1)
+    payload = fake_payload(start, end)
+    payload["elevation"] = 7
+    payload["daily"]["weather_code"] = [3, 61, 71, None]
+    payload["daily"]["snowfall_sum"] = [0, 0, 2.1, None]
+
+    rows = weather.flatten_daily(payload, "/vol/weather/open_meteo_daily_2024.json")
+
+    assert [row[0] for row in rows] == ["2024-02-27", "2024-02-28", "2024-02-29", "2024-03-01"]
+    assert all(len(row) == len(weather.WEATHER_ROW_COLUMNS) for row in rows)
+    as_dict = dict(zip(weather.WEATHER_ROW_COLUMNS, rows[2]))
+    assert as_dict["weather_code"] == 71 and as_dict["snowfall_sum"] == 2.1
+    assert as_dict["grid_elevation_m"] == 7.0
+    assert as_dict["_source_file"].endswith("open_meteo_daily_2024.json")
+    last = dict(zip(weather.WEATHER_ROW_COLUMNS, rows[3]))
+    assert last["weather_code"] is None and last["snowfall_sum"] is None
+
+
+def test_bronze_columns_cover_every_requested_variable():
+    assert set(weather.DAILY_VARIABLES) <= set(weather.WEATHER_ROW_COLUMNS)
+    # the DDL lists the variables in the same order flatten_daily emits them
+    measures = [v for v in weather.DAILY_VARIABLES if v != "weather_code"]
+    assert weather.WEATHER_ROW_COLUMNS[2:2 + len(measures)] == measures
+

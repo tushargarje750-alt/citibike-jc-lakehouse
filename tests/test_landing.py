@@ -194,3 +194,21 @@ def test_truncated_download_is_rejected(bucket, tmp_path):
     assert [k for k, _ in result.failures] == [key]
     assert "size mismatch" in result.failures[0][1]
     assert not os.path.exists(tmp_path / "tripdata/zip/JC-202610.zip")
+
+
+# ----------------------------------------------------------------- bronze contract
+
+def test_bronze_expects_exactly_the_current_file_header():
+    from citibike_ingest import bronze
+
+    assert landing.normalize_header(CURRENT_HEADER) == bronze.CURRENT_COLUMNS
+    assert bronze.CURRENT_HEADER_SIGNATURE == "|".join(landing.normalize_header(CURRENT_HEADER))
+
+
+def test_bronze_table_has_every_data_and_metadata_column():
+    from citibike_ingest import bronze
+
+    ddl = bronze.trips_table_ddl("c.s.t")
+    for name in bronze.CURRENT_COLUMNS + [m[0] for m in bronze.METADATA_COLUMNS]:
+        assert f"{name} " in ddl
+    assert ddl.startswith("CREATE TABLE IF NOT EXISTS c.s.t ")

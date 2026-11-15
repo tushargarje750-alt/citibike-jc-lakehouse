@@ -170,3 +170,41 @@ def land_weather(
 
     result.seconds = round(time.time() - started, 1)
     return result
+
+
+# --------------------------------------------------------------------------- bronze shape
+
+WEATHER_ROW_DDL = (
+    "date STRING, weather_code INT, temperature_2m_max DOUBLE, temperature_2m_min DOUBLE, "
+    "temperature_2m_mean DOUBLE, precipitation_sum DOUBLE, rain_sum DOUBLE, snowfall_sum DOUBLE, "
+    "precipitation_hours DOUBLE, wind_speed_10m_max DOUBLE, wind_gusts_10m_max DOUBLE, "
+    "grid_latitude DOUBLE, grid_longitude DOUBLE, grid_elevation_m DOUBLE, _source_file STRING"
+)
+WEATHER_ROW_COLUMNS = [part.split()[0] for part in WEATHER_ROW_DDL.split(", ")]
+
+
+def _number(value):
+    return None if value is None else float(value)
+
+
+def flatten_daily(payload: dict, source_file: str) -> list[tuple]:
+    """Turn one API response (parallel lists, one per variable) into one tuple per day.
+
+    Values are not changed; units stay as delivered (deg C, mm, cm of snow, km/h).
+    The tuple order matches WEATHER_ROW_COLUMNS.
+    """
+    daily = payload["daily"]
+    rows = []
+    for index, day in enumerate(daily["time"]):
+        code = daily["weather_code"][index]
+        rows.append((
+            day,
+            None if code is None else int(code),
+            *[_number(daily[variable][index]) for variable in DAILY_VARIABLES if variable != "weather_code"],
+            _number(payload.get("latitude")),
+            _number(payload.get("longitude")),
+            _number(payload.get("elevation")),
+            source_file,
+        ))
+    return rows
+
