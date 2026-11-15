@@ -1,7 +1,7 @@
 # Metrics log
 
 Every number here was copied from real terminal, notebook or Databricks output on the date
-shown. Nothing is estimated. "Pending" means not measured yet.
+shown. Nothing is estimated. Where a number was not captured, the log says so.
 
 ## Phase 0 — setup (2026-11-14)
 
@@ -56,7 +56,7 @@ To be re-verified by the landing notebook in Phase 1.
 | Zip size / extracted CSV size | 223.4 MB / 1,441.0 MB |
 | File names that break the usual pattern | 6 (matches the Phase 0 inventory) |
 | Immediate second run | 0 files landed, 134 skipped, 0.1 s |
-| First-run duration | Pending (reported by notebook 03 from manifest timestamps) |
+| First-run duration | 98 s from the first to the last file (read from the manifest in Phase 2) |
 
 ### Data discovery: two incompatible file formats
 
@@ -99,7 +99,7 @@ To be re-verified by the landing notebook in Phase 1.
 | Months where the two counts differ | 0 of 69 |
 | Rows with rescued (unexpected) data | 0 |
 | Rows with a blank ride_id | 0 |
-| Rows added on an immediate second run | Pending (expected 0) |
+| Rows added on a repeat run | 0. Not read from a second manual run; the scheduled job re-ran this load in Phase 5 and its reconciliation check, which fails on any extra or missing row, passed |
 
 ### Landing first run, measured from the manifest
 
@@ -123,7 +123,7 @@ To be re-verified by the landing notebook in Phase 1.
 | Item | Value | Source |
 |---|---|---|
 | Unit tests in the suite | 37 | `pytest` |
-| Unit tests passing on the Mac | Pending | `pytest` on the Mac |
+| Unit tests passing on the Mac | Not captured at this point (37 in the suite); the full suite passed with 53 of 53 in Phase 8 | `pytest` on the Mac |
 
 ## Phase 3 — silver (dbt) (2026-11-15)
 
@@ -175,7 +175,7 @@ To be re-verified by the landing notebook in Phase 1.
 | Models in the project | 13 (7 silver, 6 gold) |
 | Tests run | 73 data tests + 1 unit test |
 | Result | PASS=87, WARN=0, ERROR=0 |
-| Duration | Pending (the job run in Phase 5 records it) |
+| Duration | Not captured for the laptop run; the same build took 121.8 s as a job task in Phase 5 (includes installing dbt) |
 
 ### Gold tables (`dbt run-operation gold_summary`)
 
@@ -299,7 +299,7 @@ landed, no rows added to bronze, silver processed incrementally, gold rebuilt.
 | Dashboard content | 4 KPI tiles + 6 charts, 7 datasets, all reading gold tables | `dashboards/citibike_ridership.lvdash.json` |
 | Terraform apply | 2 added (workspace folder, dashboard), 1 changed in place (the job), 0 destroyed | `terraform apply` |
 | Cause of the job "change" | task order only (Terraform listed tasks in a different order than Databricks returns them); fixed by declaring tasks alphabetically | `terraform plan` |
-| `terraform plan` after the fix | Pending (expected: No changes) | `terraform plan` |
+| `terraform plan` after the fix | No changes; infrastructure matches the configuration | `terraform plan` |
 | Terraform-managed resources in total | 3 (job, folder, dashboard) | `infra/terraform` |
 | Charts rendering without errors | 6 of 6, plus 4 of 4 tiles | published dashboard, screenshots in `docs/screenshots` |
 | Tile values match the gold summary | total trips 5.36M, 2.56K per day, 72.1% members, 43% electric | published dashboard |
