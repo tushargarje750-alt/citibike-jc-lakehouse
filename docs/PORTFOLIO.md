@@ -14,8 +14,9 @@ changes after a later run, update both files together.
   tests) with an incremental merge on ride ID; quarantined 67,462 invalid rows (1.24%) under named
   rules while a reconciliation test accounts for 100% of bronze rows.
 - Automated the pipeline as a 5-task Databricks job defined in Terraform (201 s end to end) and
-  added GitHub Actions CI that runs 53 unit tests, Terraform validation and a full dbt build
-  (87 steps in 71 s) on every push, with dbt docs auto-published and a dashboard deployed as code.
+  added GitHub Actions CI that runs 69 unit tests, Terraform validation and a full dbt build
+  (87 steps in 71 s) on every push, with a demo website and dbt docs auto-published and a
+  dashboard deployed as code.
 
 ### Shorter variants (one line each)
 
@@ -35,13 +36,14 @@ and daily weather into tested analytics tables, with the job, the dashboard and 
 - Incremental ingestion of 134 monthly files with Auto Loader and a manifest table; a second run loads nothing, and bronze matches landing for all 69 months.
 - dbt silver and gold layers with 13 models and 74 tests; 67,462 bad rows (1.24%) quarantined with a reason, none dropped silently.
 - A 5-task Databricks job and a dashboard (4 KPI tiles, 6 charts) deployed with Terraform; the full pipeline runs in 201 seconds.
-- GitHub Actions runs 53 unit tests, Terraform validation and a real dbt build on every push, and publishes the dbt docs site.
+- GitHub Actions runs 69 unit tests, Terraform validation and a real dbt build on every push, and publishes a demo website and the dbt docs.
 
 **Tech stack:** Databricks · Delta Lake · Auto Loader · dbt · Terraform · GitHub Actions · Python · SQL
 
 **Links:**
 - Code: https://github.com/tushargarje750-alt/citibike-jc-lakehouse
-- dbt docs and lineage: https://tushargarje750-alt.github.io/citibike-jc-lakehouse/
+- Live demo: https://tushargarje750-alt.github.io/citibike-jc-lakehouse/
+- dbt docs and lineage: https://tushargarje750-alt.github.io/citibike-jc-lakehouse/dbt-docs/
 
 **Finding worth mentioning in an interview:** wet days carry about a fifth fewer trips than dry
 days in the same month (ridership index 0.87 against 1.07), measured after removing the system's

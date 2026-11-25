@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Citi Bike JC lakehouse</title>
+  <meta name="description" content="Five years of Citi Bike trips in Jersey City and Hoboken, cleaned and modelled on Databricks with Delta Lake and dbt. This demo shows the saved results of the pipeline's gold tables.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Ccircle cx='9.5' cy='20' r='5' fill='none' stroke='white' stroke-width='2.4'/%3E%3Ccircle cx='22.5' cy='20' r='5' fill='none' stroke='white' stroke-width='2.4'/%3E%3Cpath d='M9.5 20l5-8h6l2 8M13 9h4' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-inner">
+      <a class="brand" href="#">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7"/><circle cx="9.5" cy="20" r="5"/><circle cx="22.5" cy="20" r="5"/><path d="M9.5 20l5-8h6l2 8M13 9h4"/></svg>
+        Citi Bike JC lakehouse
+      </a>
+      <nav aria-label="Sections">
+        <a href="#results">Results</a>
+        <a href="#quality">Data quality</a>
+        <a href="#pipeline">Pipeline</a>
+        <a href="dbt-docs/">dbt docs</a>
+        <a href="https://github.com/tushargarje750-alt/citibike-jc-lakehouse">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero wrap">
+      <p class="eyebrow">Data engineering on Databricks</p>
+      <h1>How do Jersey City and Hoboken ride Citi Bike?</h1>
+      <p class="lede">
+        This project loads every public Citi Bike trip file for Jersey City and Hoboken, adds daily
+        weather, and cleans and tests the data in a bronze → silver → gold lakehouse on Databricks
+        with Delta Lake and dbt. The charts below are the pipeline's gold tables.
+      </p>
+      <p class="note" id="demo-note">
+        <strong>About this demo:</strong> the numbers were exported from the project's gold tables
+        and saved with this page. The page never contacts Databricks.
+      </p>
+    </section>
+
+    <section id="results" class="wrap" aria-labelledby="results-title">
+      <div class="section-head">
+        <h2 id="results-title">Results</h2>
+        <p class="section-sub" id="period"></p>
+      </div>
+
+      <div class="stats" id="stats"></div>
+
+      <div class="grid">
+        <figure class="card span-2" id="chart-monthly">
+          <figcaption><h3>Trips per month</h3><p>Members and casual riders. Summer is busy, winter is quiet.</p></figcaption>
+        </figure>
+        <figure class="card" id="chart-stations">
+          <figcaption><h3>Top 10 start stations</h3><p>Trips started at each station since February 2021.</p></figcaption>
+        </figure>
+        <figure class="card" id="chart-hours">
+          <figcaption><h3>Peak hours</h3><p>Trips that start in each hour on a typical weekday and weekend day.</p></figcaption>
+        </figure>
+        <figure class="card" id="chart-duration">
+          <figcaption><h3>Median trip length</h3><p>Minutes per trip, by month. Casual riders take longer trips.</p></figcaption>
+        </figure>
+        <figure class="card" id="chart-weather">
+          <figcaption><h3>Weather impact</h3><p>Ridership index: 1.0 is a normal day for that month. Rain lowers it.</p></figcaption>
+        </figure>
+        <figure class="card span-2" id="chart-scatter">
+          <figcaption><h3>Each day: trips against temperature</h3><p>One dot per day. Warm, dry days are the busiest.</p></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="quality" class="wrap" aria-labelledby="quality-title">
+      <div class="section-head">
+        <h2 id="quality-title">Data quality</h2>
+        <p class="section-sub">Bad rows are never dropped silently. Every bronze row is either accepted or set aside with a reason, and a dbt test checks that the two add up.</p>
+      </div>
+      <div class="card quality">
+        <div class="quality-totals" id="quality-totals"></div>
+        <div class="segbar" id="quality-bar" role="img"></div>
+        <ul class="legend" id="quality-legend"></ul>
+        <table class="reasons" id="quality-reasons">
+          <caption>Why rows were set aside (quarantined)</caption>
+          <thead><tr><th scope="col">Reason</th><th scope="col" class="num">Rows</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="pipeline" class="wrap" aria-labelledby="pipeline-title">
+      <div class="section-head">
+        <h2 id="pipeline-title">How the pipeline works</h2>
+        <p class="section-sub">One Databricks job, defined in Terraform, runs these steps every Monday. GitHub Actions tests every push.</p>
+      </div>
+      <ol class="steps">
+        <li>
+          <span class="step-tag">Landing</span>
+          <h3>Download the files</h3>
+          <p>Lists the public Citi Bike bucket, stores each monthly zip in a Volume, and records its size, checksum and row count in a manifest table. A file is downloaded again only if it changed.</p>
+        </li>
+        <li>
+          <span class="step-tag">Bronze</span>
+          <h3>Load raw rows</h3>
+          <p>Auto Loader appends new CSV files to a Delta table, keeping every column as text. Row counts are checked against the manifest; a mismatch fails the run.</p>
+        </li>
+        <li>
+          <span class="step-tag">Silver</span>
+          <h3>Clean and test</h3>
+          <p>dbt types the data, applies nine named rejection rules, removes duplicate rides and joins the daily weather. Rejected rows go to a quarantine table with their reason.</p>
+        </li>
+        <li>
+          <span class="step-tag">Gold</span>
+          <h3>Summarise</h3>
+          <p>Six small tables: daily ridership, top stations, peak hours, members vs casual riders, weather impact and trip-length statistics. Each is tested to add up to the silver trips.</p>
+        </li>
+        <li>
+          <span class="step-tag">Serve</span>
+          <h3>Dashboard and docs</h3>
+          <p>A Databricks AI/BI dashboard reads the gold tables. The same seven queries made this page. The dbt docs show every model, column and test.</p>
+        </li>
+      </ol>
+      <div class="links-row">
+        <a class="button" href="dbt-docs/">Open the dbt docs and lineage graph</a>
+        <a class="button ghost" href="https://github.com/tushargarje750-alt/citibike-jc-lakehouse">Read the code on GitHub</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    <p id="foot-export"></p>
+    <p>
+      Trip data: <a href="https://citibikenyc.com/system-data">Citi Bike system data</a>, used under the NYC Bike Share data licence agreement.
+      Weather data by <a href="https://open-meteo.com/">Open-Meteo.com</a> (CC BY 4.0).
+    </p>
+  </footer>
+
+  <div class="tooltip" id="tooltip" role="status" hidden></div>
+  <noscript><p class="wrap note">This page needs JavaScript to draw its charts.</p></noscript>
+  <script src="app.js"></script>
+</body>
+</html>

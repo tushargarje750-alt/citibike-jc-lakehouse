@@ -27,7 +27,7 @@ crash.log
 .databricks/
 
 # --- local data downloads ---
-data/
+/data/
 
 # --- macOS / editors ---
 .DS_Store
@@ -36,3 +36,6 @@ data/
 
 # --- test caches ---
 .pytest_cache/
+
+# --- demo site build output (the workflow assembles it) ---
+_site/

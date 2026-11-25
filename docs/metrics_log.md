@@ -312,6 +312,20 @@ landed, no rows added to bronze, silver processed incrementally, gold rebuilt.
 | README | architecture diagram, results, data quality, orchestration, CI, screenshots, setup, limits |
 | Resume bullets and portfolio card | `docs/PORTFOLIO.md`, every number traceable to this log |
 
+## Phase 9 — demo website (2026-11-24)
+
+| Item | Value | Source |
+|---|---|---|
+| Before the export | For several hours the SQL warehouse could not start ("Cannot create the resource, please try again later"); the scheduled run of 2026-11-23 did not happen | Databricks API |
+| Job run just before the export | SUCCESS, 5 of 5 tasks, started manually 2026-11-24 23:29 New York time; `dbt_build` 125.2 s | Databricks API |
+| Export | 2026-11-25 04:33 UTC (2026-11-24 23:33 New York time), read-only SELECTs | `python scripts/export_demo_data.py` |
+| Exported data | 7 dashboard datasets plus data-quality and per-year counts, 89,933 bytes | `site/data/demo.json` |
+| Trips in the export | 5,358,983, from 2021-02-01 to 2026-10-31 | `site/data/demo.json` |
+| Bronze = accepted + quarantined | 5,426,445 = 5,358,983 + 67,462 (checked by the export script) | `site/data/demo.json` |
+| Same as the Phase 3 and 4 numbers above | yes: totals, KPI tiles, trips per year, top 5 stations, rejection reasons, peak hours, dry-day weather indexes, busiest day | comparison against this log |
+| Unit tests in the suite | 69, all passing on the Mac | `pytest` |
+| Website | demo page at the root of GitHub Pages, dbt docs moved to `/dbt-docs/` | `.github/workflows/deploy-demo.yml` |
+
 ## Notes on numbers that were measured at different times
 
 - The CI run measured in Phase 6 executed 46 Python unit tests. The suite grew to 53 in Phase 7;

@@ -1,7 +1,30 @@
 # Citi Bike Jersey City & Hoboken — Lakehouse Pipeline
 
 [![CI](https://github.com/tushargarje750-alt/citibike-jc-lakehouse/actions/workflows/ci.yml/badge.svg)](https://github.com/tushargarje750-alt/citibike-jc-lakehouse/actions/workflows/ci.yml)
-[![dbt docs](https://img.shields.io/badge/dbt%20docs-live-blue)](https://tushargarje750-alt.github.io/citibike-jc-lakehouse/)
+[![Demo site](https://github.com/tushargarje750-alt/citibike-jc-lakehouse/actions/workflows/deploy-demo.yml/badge.svg)](https://github.com/tushargarje750-alt/citibike-jc-lakehouse/actions/workflows/deploy-demo.yml)
+
+**Live demo:** https://tushargarje750-alt.github.io/citibike-jc-lakehouse/
+(the pipeline's results in your browser; nothing to install)<br>
+**dbt docs and lineage graph:** https://tushargarje750-alt.github.io/citibike-jc-lakehouse/dbt-docs/
+
+![Demo page: headline numbers and trips per month for members and casual riders](docs/screenshots/demo.jpg)
+
+<details>
+<summary>More screenshots</summary>
+
+Top start stations, peak hours, trip length and weather impact, from the gold tables:
+
+![Demo page: top 10 start stations, peak hours, median trip length and the weather ridership index](docs/screenshots/demo-charts.jpg)
+
+Data quality: every bronze row is either accepted or set aside with a reason:
+
+![Demo page: rows in bronze, accepted and quarantined, with the quarantine reasons](docs/screenshots/demo-quality.jpg)
+
+The demo on a phone, in dark mode:
+
+<img src="docs/screenshots/demo-phone.jpg" width="320" alt="Demo page on a phone in dark mode">
+
+</details>
 
 An end-to-end data engineering project on **Databricks Free Edition**. It takes the public
 Citi Bike trip files for Jersey City and Hoboken, adds daily weather, and moves the data through
@@ -9,7 +32,73 @@ a bronze → silver → gold (medallion) architecture on **Delta Lake**. Transfo
 written in **dbt**, the pipeline runs as a scheduled **Databricks job defined in Terraform**, and
 **GitHub Actions** tests every push.
 
-**Live dbt docs and lineage graph:** https://tushargarje750-alt.github.io/citibike-jc-lakehouse/
+## How to use this project
+
+There are four ways to use it. The first three need no Databricks account.
+
+### 1. Look at the results (no install)
+
+1. Open the [live demo](https://tushargarje750-alt.github.io/citibike-jc-lakehouse/).
+2. Move the mouse over a chart (or tap it on a phone) to see the exact values.
+3. Click **Show the numbers** under a chart to see its data as a table.
+
+The demo is a static page. It shows results that were exported from the gold tables and saved with
+the page, and it never connects to Databricks. The export date is written at the top of the page.
+It uses the same seven SQL queries as the Databricks dashboard, so both show the same numbers.
+
+### 2. Browse the models and tests (no install)
+
+1. Open the [dbt docs](https://tushargarje750-alt.github.io/citibike-jc-lakehouse/dbt-docs/).
+2. Pick a model on the left, for example `fct_trips`, to read what each column means and which tests check it.
+3. Click the blue round button at the bottom right to open the lineage graph: raw files on the left, gold tables on the right.
+
+### 3. Run the tests on your computer (no Databricks)
+
+You need Python 3.12 and Git.
+
+```bash
+git clone https://github.com/tushargarje750-alt/citibike-jc-lakehouse.git
+cd citibike-jc-lakehouse
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+pytest
+```
+
+The tests cover the ingestion logic, the helper scripts, the dashboard definition and the demo data
+file. To open the demo page from your own copy:
+
+```bash
+python3 -m http.server 8000 --directory site
+```
+
+Then open http://localhost:8000. (The dbt docs link only works on the published site.)
+
+### 4. Run the whole pipeline in your own Databricks workspace
+
+Do step 3 first. You also need a Databricks Free Edition workspace, the Databricks CLI and Terraform.
+
+```bash
+# 1. Settings: fill in host, HTTP path and a personal access token
+cp .env.example .env
+source scripts/activate.sh
+
+# 2. Load the data: add this repo as a Git folder in Databricks, then run, in order,
+#    ingestion/notebooks/01_land_tripdata, 02_land_weather, 03_bronze_trips, 04_bronze_weather
+
+# 3. Build and test silver and gold
+cd dbt && dbt build && cd ..
+
+# 4. Create the scheduled job and the dashboard
+databricks auth login --host https://<your-workspace> --profile citibike
+cd infra/terraform && terraform init && terraform apply && cd ../..
+
+# 5. Refresh the demo data (read-only SELECT queries on your SQL warehouse)
+python scripts/export_demo_data.py
+```
+
+`.env` is ignored by Git, so your token is never committed. Step 5 rewrites `site/data/demo.json`;
+committing it and pushing to `main` republishes the demo. The export stops with an error if the
+numbers do not add up (for example, if bronze rows ≠ accepted + quarantined rows).
 
 ## Results at a glance
 
@@ -26,8 +115,9 @@ number, is in [docs/metrics_log.md](docs/metrics_log.md).
 | Silver: quarantined rows | 67,462 (1.24%), each with a named reason; 0 rows unaccounted for |
 | dbt project | 13 models, 73 data tests, 1 unit test, all passing |
 | Scheduled job | 5 tasks, 201 s end to end |
-| CI on each push | 53 Python unit tests, Terraform validation, full dbt build (87 steps in 71 s) |
+| CI on each push | 69 Python unit tests, Terraform validation, full dbt build (87 steps in 71 s) |
 | Dashboard | 4 KPI tiles and 6 charts, defined as code |
+| Demo website | Static page on GitHub Pages, built from the dashboard's own 7 queries |
 
 ## Architecture
 
@@ -73,9 +163,14 @@ flowchart LR
 - **Grove St PATH is the busiest start station** (175,616 trips), followed by the two Hoboken Terminal stations.
 - **Rain costs about a fifth of ridership.** Compared with a normal day for the same month, wet days score 0.87 and dry days 1.07.
 
+<details>
+<summary>The same results in the Databricks AI/BI dashboard (screenshots from the workspace)</summary>
+
 ![Dashboard: KPI tiles and monthly trips](docs/screenshots/dashboard_1_overview.png)
 ![Dashboard: top stations, peak hours, trip length, weather impact](docs/screenshots/dashboard_2_charts.png)
 ![Dashboard: daily trips against temperature](docs/screenshots/dashboard_3_weather.png)
+
+</details>
 
 ## Data quality
 
@@ -102,8 +197,10 @@ Discovery during landing also found two incompatible file formats (the switch is
 three header variants, and six file names that break the naming pattern, which is why files are found
 by listing the bucket rather than by building URLs.
 
-![dbt lineage graph](docs/screenshots/dbt_lineage1.png)
-![dbt lineage graph, detail](docs/screenshots/dbt_lineage2.png)
+The dbt lineage graph, from the two bronze tables on the left to the six gold tables and the
+tests that check them on the right:
+
+![dbt lineage graph: bronze trips and weather flow through staging, int_trips__checked, fct_trips and the dimensions into six gold tables, with the singular tests at the edges](docs/screenshots/dbt-lineage.jpg)
 
 ## Orchestration and CI
 
@@ -128,7 +225,9 @@ and is scheduled for Mondays at 06:00 New York time.
 2. `terraform fmt -check` and `terraform validate`.
 3. A real `dbt build --full-refresh` against Databricks, on one month of data, into separate `ci_` schemas.
 
-[docs.yml](.github/workflows/docs.yml) rebuilds the dbt docs site and publishes it to GitHub Pages.
+[deploy-demo.yml](.github/workflows/deploy-demo.yml) publishes the website to GitHub Pages: the
+demo page at the root, and the dbt docs, rebuilt from the real schemas, under `/dbt-docs/`. If
+Databricks cannot be reached, the build fails and the site published before stays online.
 
 ## Tech stack
 
@@ -144,33 +243,11 @@ ingestion/notebooks/         thin Databricks notebooks: 01-02 landing, 03-04 bro
 dbt/                         dbt project: staging, intermediate, marts/core (silver), marts/analytics (gold)
 infra/terraform/             the job and the dashboard as code
 dashboards/                  dashboard definition (.lvdash.json)
-scripts/                     run-summary and docs helpers
+scripts/                     run summaries, docs site helper, demo data export
+site/                        the demo website (HTML, CSS, JavaScript; no build step) and its data file
 tests/                       Python unit tests
-.github/workflows/           CI and docs publishing
+.github/workflows/           CI and website publishing
 docs/                        plan, decisions, metrics log, screenshots
-```
-
-## Run it yourself
-
-You need a Databricks Free Edition workspace, the Databricks CLI, Python 3.12 and Terraform.
-
-```bash
-# 1. Local environment
-python3.12 -m venv .venv && source .venv/bin/activate
-pip install -r requirements-dev.txt
-cp .env.example .env                 # fill in host, HTTP path and a personal access token
-source scripts/activate.sh
-pytest                               # unit tests, no Databricks needed
-
-# 2. Load the data: add this repo as a Git folder in Databricks, then run, in order,
-#    ingestion/notebooks/01_land_tripdata, 02_land_weather, 03_bronze_trips, 04_bronze_weather
-
-# 3. Build and test silver and gold
-cd dbt && dbt build && cd ..
-
-# 4. Create the scheduled job and the dashboard
-databricks auth login --host https://<your-workspace> --profile citibike
-cd infra/terraform && terraform init && terraform apply
 ```
 
 ## Design decisions and limits

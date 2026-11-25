@@ -1,15 +1,19 @@
-name: Publish dbt docs
+name: Deploy demo site and dbt docs
 
-# Rebuilds the dbt documentation site (model descriptions + lineage graph) and
-# publishes it to GitHub Pages whenever the dbt project changes on main.
+# Publishes the project website on GitHub Pages:
+#   /           the demo page in site/ (static; its data file comes from scripts/export_demo_data.py)
+#   /dbt-docs/  the dbt documentation site, generated from the real Databricks schemas
+# GitHub Pages holds one site per repository, so both parts are built and deployed together.
+# If Databricks cannot be reached the build fails and the site published before stays online.
 
 on:
   push:
     branches: [main]
     paths:
+      - "site/**"
       - "dbt/**"
       - "scripts/prepare_docs_site.py"
-      - ".github/workflows/docs.yml"
+      - ".github/workflows/deploy-demo.yml"
   workflow_dispatch:
 
 permissions:
@@ -23,14 +27,19 @@ concurrency:
 
 jobs:
   build:
-    name: Generate docs
+    name: Build the site
     runs-on: ubuntu-latest
     env:
       DBT_DATABRICKS_HOST: ${{ secrets.DBT_DATABRICKS_HOST }}
       DBT_DATABRICKS_HTTP_PATH: ${{ secrets.DBT_DATABRICKS_HTTP_PATH }}
       DBT_ENV_SECRET_DATABRICKS_TOKEN: ${{ secrets.DBT_ENV_SECRET_DATABRICKS_TOKEN }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Check the demo data file is valid JSON
+        run: python3 -m json.tool site/data/demo.json > /dev/null
 
       - uses: actions/setup-python@v6
         with:
@@ -41,18 +50,20 @@ jobs:
       - name: Install dbt
         run: pip install -r requirements-dev.txt
 
-      - name: Generate the docs (reads table metadata from the real schemas)
+      - name: Generate the dbt docs (reads table metadata from the real schemas)
         working-directory: dbt
         run: dbt docs generate
 
-      - name: Assemble the site and remove owner emails
-        run: python scripts/prepare_docs_site.py dbt/target site
+      - name: Assemble the site (demo at the root, dbt docs in dbt-docs/, owner emails removed)
+        run: |
+          cp -R site _site
+          python scripts/prepare_docs_site.py dbt/target _site/dbt-docs
 
       - uses: actions/configure-pages@v6
 
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: site
+          path: _site
 
   deploy:
     name: Deploy to GitHub Pages
